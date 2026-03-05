@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexotis Penal Code</title>
+
+<style>
+body{
+margin:0;
+font-family:Arial, Helvetica, sans-serif;
+background:#050505;
+color:white;
+display:flex;
+}
+
+/* MAIN */
+.main{
+width:75%;
+padding:20px;
+}
+
+/* SIDEBAR */
+.sidebar{
+width:25%;
+background:#000;
+border-left:2px solid #00ff88;
+padding:20px;
+position:fixed;
+right:0;
+height:100vh;
+overflow:auto;
+box-shadow:0 0 25px #00ff88;
+}
+
+/* LOGO */
+.logo{
+font-size:45px;
+font-weight:bold;
+color:#00ff88;
+text-align:center;
+text-shadow:0 0 20px #00ff88,0 0 40px #00ff88;
+margin-bottom:15px;
+}
+
+/* SEARCH */
+.search input{
+width:100%;
+padding:10px;
+background:#111;
+border:1px solid #00ff88;
+color:white;
+border-radius:6px;
+}
+
+/* SECTION */
+.section{margin-bottom:15px;}
+
+.section h2{
+background:#111;
+padding:10px;
+border:1px solid #00ff88;
+border-radius:6px;
+cursor:pointer;
+transition:0.3s;
+}
+
+.section h2:hover{
+background:#00ff88;
+color:black;
+box-shadow:0 0 15px #00ff88;
+}
+
+.content{
+max-height:0;
+overflow:hidden;
+transition:max-height 0.5s ease;
+}
+
+.content.active{max-height:6000px;}
+
+.pasal{
+padding:8px;
+border-bottom:1px solid #222;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.price{
+color:#00ff88;
+font-weight:bold;
+cursor:pointer;
+text-shadow:0 0 8px #00ff88;
+}
+
+/* BUTTON */
+button{
+margin-top:5px;
+padding:8px;
+width:100%;
+background:#00ff88;
+border:none;
+font-weight:bold;
+cursor:pointer;
+border-radius:6px;
+}
+
+button:hover{
+box-shadow:0 0 15px #00ff88;
+}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+body{flex-direction:column;}
+.main{width:100%;}
+.sidebar{
+position:relative;
+width:100%;
+height:auto;
+}
+}
+</style>
+</head>
+<body>
+
+<div class="main">
+<div class="logo">N</div>
+
+<div class="search">
+<input type="text" id="searchInput" placeholder="Search Pasal..." onkeyup="searchPasal()">
+</div>
+
+<div id="containerPasal"></div>
+</div>
+
+<div class="sidebar">
+<h3>Total Hukuman</h3>
+<p>Total Denda: $<span id="totalDenda">0</span></p>
+<p>Total Penjara: <span id="totalPenjara">0</span> bulan</p>
+<p>Total Impound: <span id="totalImpound">0</span></p>
+
+<button onclick="copyPasal()">Copy Pasal</button>
+<button onclick="copyDenda()">Copy Denda</button>
+<button onclick="resetAll()">Reset</button>
+
+<hr>
+
+<h3>Admin Login</h3>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Login</button>
+
+<p style="margin-top:20px;font-size:12px;">
+Developed by Roberto Costello
+</p>
+</div>
+
+<script src="pasal_database.js"></script>
+
+<script>
+
+
+/* ================= SYSTEM ================= */
+
+let isAdmin=false;
+const multiplier=0.4; // penyesuaian ekonomi
+const container=document.getElementById("containerPasal");
+
+for(const kategori in dataPasal){
+let section=document.createElement("div");
+section.className="section";
+
+let title=document.createElement("h2");
+title.innerText=kategori;
+let content=document.createElement("div");
+content.className="content";
+
+title.onclick=()=>content.classList.toggle("active");
+
+dataPasal[kategori].forEach((item,i)=>{
+let div=document.createElement("div");
+div.className="pasal";
+
+let adjusted=Math.round(item[1]*multiplier);
+
+if(localStorage.getItem(item[0])){
+adjusted=parseInt(localStorage.getItem(item[0]));
+}
+
+div.innerHTML=`
+<label>
+<input type="checkbox" data-denda="${adjusted}" data-penjara="${item[2]}" data-impound="${item[3]}">
+${item[0]}
+</label>
+<span class="price" onclick="editPrice(this,'${item[0]}')">$${adjusted}</span>
+`;
+
+content.appendChild(div);
+});
+
+section.appendChild(title);
+section.appendChild(content);
+container.appendChild(section);
+}
+
+document.addEventListener("change",calculate);
+
+function calculate(){
+let d=0,p=0,i=0;
+document.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+if(cb.checked){
+d+=parseInt(cb.dataset.denda);
+p+=parseInt(cb.dataset.penjara);
+i+=parseInt(cb.dataset.impound);
+}
+});
+totalDenda.innerText=d;
+totalPenjara.innerText=p;
+totalImpound.innerText=i;
+}
+
+function editPrice(el,name){
+if(!isAdmin) return;
+let val=prompt("Edit nominal denda:",el.innerText.replace("$",""));
+if(val && !isNaN(val)){
+el.innerText="$"+val;
+localStorage.setItem(name,val);
+el.previousElementSibling.querySelector("input").dataset.denda=val;
+calculate();
+}
+}
+
+function login(){
+if(username.value==="DevilZHackeds" && password.value==="rusdin1234"){
+isAdmin=true;
+alert("Admin Login Success");
+}else{
+alert("Login Failed");
+}
+}
+
+function copyPasal(){
+let arr=[];
+document.querySelectorAll("input:checked").forEach(cb=>{
+arr.push(cb.parentElement.innerText);
+});
+navigator.clipboard.writeText(arr.join("\n"));
+}
+
+function copyDenda(){
+navigator.clipboard.writeText(totalDenda.innerText);
+}
+
+function resetAll(){
+document.querySelectorAll("input[type=checkbox]").forEach(cb=>cb.checked=false);
+calculate();
+}
+
+function searchPasal(){
+let val=searchInput.value.toLowerCase();
+document.querySelectorAll(".pasal").forEach(p=>{
+p.style.display=p.innerText.toLowerCase().includes(val)?"flex":"none";
+});
+}
+</script>
+
+</body>
+</html>
